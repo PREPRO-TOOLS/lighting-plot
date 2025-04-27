@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lighting Designer Core</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Futura:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #1a1a1a;
+        }
+        #viewport {
+            width: 100vw;
+            height: 100vh;
+        }
+        .debug-info {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            color: white;
+            font-family: monospace;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 4px;
+            z-index: 1000;
+        }
+        .logo {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-family: 'Futura', sans-serif;
+            font-size: 24px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            z-index: 1000;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .dimensions-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 4px;
+            color: white;
+            font-family: 'Futura', sans-serif;
+            z-index: 1000;
+        }
+        .dimensions-panel label {
+            display: inline-block;
+            width: 110px;
+            margin-right: 10px;
+            color: white;
+            font-family: 'Futura', sans-serif;
+        }
+        .dimensions-panel .measurement-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .dimensions-panel .m-value {
+            color: rgba(255,255,255,0.7);
+            margin-left: 15px;
+            font-size: 0.9em;
+        }
+        .dimensions-panel input {
+            width: 70px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 4px;
+            border-radius: 3px;
+            margin-bottom: 5px;
+            font-family: 'Futura', sans-serif;
+            /* Add styling for number input arrows */
+            &::-webkit-inner-spin-button {
+                opacity: 1;
+                height: 30px;
+                margin-left: 5px;
+            }
+            &::-webkit-outer-spin-button {
+                opacity: 1;
+                height: 30px;
+                margin-left: 5px;
+            }
+        }
+        .dimensions-panel input:focus {
+            outline: none;
+            border-color: rgba(255,255,255,0.5);
+        }
+        .dimensions-panel .unit {
+            margin-left: 5px;
+            color: rgba(255,255,255,0.7);
+        }
+        .view-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+        .view-button {
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-family: 'Futura', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 80px;
+            text-align: center;
+        }
+        .view-button:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.5);
+        }
+        .view-button.active {
+            background: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.7);
+        }
+        .view-group {
+            display: flex;
+            gap: 5px;
+            padding: 5px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 4px;
+        }
+        .measurement-line {
+            position: absolute;
+            color: #fff;
+            font-family: 'Futura', sans-serif;
+            font-size: 12px;
+            pointer-events: none;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+        .measurement-label {
+            background: rgba(0,0,0,0.6);
+            padding: 2px 6px;
+            border-radius: 3px;
+            white-space: nowrap;
+        }
+        .environment-controls {
+            position: fixed;
+            top: 60px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+        .control-button {
+            padding: 8px 16px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 4px;
+            font-family: 'Futura', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .control-button:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.5);
+        }
+        .control-button.active {
+            background: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.7);
+        }
+    </style>
+</head>
+<body>
+    <div class="logo">Lighting Plot</div>
+    <div id="viewport"></div>
+    <div class="dimensions-panel">
+        <div class="measurement-row">
+            <label>Width (ft):</label>
+            <input type="number" id="width-input" min="1" step="1">
+            <span class="unit">'</span>
+            <span class="m-value" id="width-m"></span>
+        </div>
+        <div class="measurement-row">
+            <label>Length (ft):</label>
+            <input type="number" id="length-input" min="1" step="1">
+            <span class="unit">'</span>
+            <span class="m-value" id="length-m"></span>
+        </div>
+        <div class="measurement-row">
+            <label>Height (ft):</label>
+            <input type="number" id="height-input" min="1" step="1">
+            <span class="unit">'</span>
+            <span class="m-value" id="height-m"></span>
+        </div>
+    </div>
+    <div class="view-controls">
+        <div class="view-group">
+            <button id="centerFitBtn" class="view-button">Center & Fit</button>
+            <button id="lockViewBtn" class="view-button">Lock View</button>
+        </div>
+        <div class="view-group">
+            <button id="topViewBtn" class="view-button">Top</button>
+            <button id="frontViewBtn" class="view-button">Front</button>
+            <button id="sideViewBtn" class="view-button">Side</button>
+        </div>
+        <div class="view-group">
+            <button id="measurementsBtn" class="view-button">Show Measurements</button>
+        </div>
+    </div>
+    <div class="debug-info">
+        <div>FPS: <span id="fps">0</span></div>
+        <div>Camera Position: <span id="camera-pos">0,0,0</span></div>
+        <div>Memory: <span id="memory">0 MB</span></div>
+    </div>
+
+    <!-- Core Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <!-- Core functionality -->
+    <script>
+    // Core variables
+    let scene, camera, renderer, controls;
+    let stats = {
+        fps: 0,
+        lastFrameTime: 0,
+        frameCount: 0
+    };
+
+    // Environment configurations
+    const environments = {
+        standard: {
+            name: 'Standard Studio',
+            dimensions: { width: 20, length: 20, height: 6 },
+            wallColor: 0xcccccc,
+            wallOpacity: 0.2,
+            floorColor: 0x333333,
+            hasGrid: true,
+            gridColor: 0x444444,
+            gridDivisions: 20,
+            features: {
+                hasWalls: true,
+                hasCeiling: false,
+                hasWindows: false,
+                showGridLines: true,
+                hasFrontWall: true,
+                hasRigging: true,
+                riggingConfig: {
+                    trussColor: 0x444444,
+                    numTrussesLength: 4,  // Fewer trusses for standard studio
+                    numTrussesWidth: 4,
+                    trussSpacing: 3,
+                    trussSize: 0.3        // Smaller trusses
+                }
+            }
+        },
+        soundStage: {
+            name: 'Sound Stage',
+            dimensions: { width: 30, length: 40, height: 12 },
+            wallColor: 0x222222,
+            wallOpacity: 0.7,
+            floorColor: 0x333333,
+            hasGrid: true,
+            gridColor: 0x444444,
+            gridDivisions: 20,
+            features: {
+                hasWalls: true,
+                wallConfig: {
+                    back: true,
+                    front: false,
+                    left: true,
+                    right: true
+                },
+                hasCeiling: false,
+                hasRigging: true,
+                riggingConfig: {
+                    trussColor: 0x444444,
+                    numTrussesLength: 8,
+                    numTrussesWidth: 6,
+                    trussSpacing: 4,
+                    trussSize: 0.5
+                },
+                showGridLines: true
+            }
+        },
+        location: {
+            name: 'Location Studio',
+            dimensions: { width: 15, length: 15, height: 4 },
+            wallColor: 0x999999,
+            wallOpacity: 0.3,
+            floorColor: 0x555555,
+            hasGrid: true,
+            gridColor: 0x666666,
+            gridDivisions: 15,
+            features: {
+                hasWalls: true,
+                hasCeiling: false,
+                hasWindows: true,
+                windowColor: 0x88ccff,
+                windowOpacity: 0.1,
+                hasRigging: true,
+                riggingConfig: {
+                    trussColor: 0x666666,  // Lighter color for location
+                    numTrussesLength: 3,   // Minimal rigging for location
+                    numTrussesWidth: 3,
+                    trussSpacing: 4,
+                    trussSize: 0.25        // Thinner trusses
+                }
+            }
+        },
+        blackBox: {
+            name: 'Black Box',
+            dimensions: { width: 20, length: 20, height: 6 },
+            wallColor: 0x000000,
+            wallOpacity: 0.1,
+            floorColor: 0x111111,
+            hasGrid: true,
+            gridColor: 0x444444,  // Change from 0x222222 to 0x444444 for better visibility
+            gridDivisions: 20,
+            features: {
+                hasWalls: true,
+                hasCeiling: true,
+                hasWindows: false,
+                hasRigging: true,
+                riggingConfig: {
+                    trussColor: 0x222222,  // Dark trusses for black box
+                    numTrussesLength: 5,   // More coverage for theatrical setup
+                    numTrussesWidth: 5,
+                    trussSpacing: 3,
+                    trussSize: 0.35        // Medium trusses
+                },
+                showGridLines: true
+            }
+        }
+    };
+
+    // Add these variables at the top with other globals
+    let savedCameraState = null;
+    let isViewLocked = false;
+    let isCenterLocked = false;
+    let originalControlsState = null;
+    let showMeasurements = false;
+    let measurementObjects = [];
+    let currentViewMode = 'perspective';
+    let isTransitioning = false;
+    let originalCamera = null;
+
+    // Initialize the scene
+    function init() {
+        // Scene setup
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a1a);
+
+        // Camera setup - with larger initial values
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+        camera.position.set(40, 40, 40);
+        camera.lookAt(0, 0, 0);
+
+        // Renderer setup
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        document.getElementById('viewport').appendChild(renderer.domElement);
+
+        // Controls setup with all features enabled by default
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.screenSpacePanning = true;
+        controls.minDistance = 5;
+        controls.maxDistance = 50;
+        controls.maxPolarAngle = Math.PI; // Allow full rotation
+        controls.enableZoom = true;
+        controls.enableRotate = true;
+        controls.enablePan = true;
+        
+        // Add grid
+        const grid = new THREE.GridHelper(20, 20, 0x444444, 0x222222);
+        scene.add(grid);
+
+        // Add ambient light
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        scene.add(ambientLight);
+
+        // Add directional light
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+        dirLight.position.set(5, 5, 5);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // Add ground plane
+        const groundGeometry = new THREE.PlaneGeometry(20, 20);
+        const groundMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x333333,
+            roughness: 0.8,
+            metalness: 0.2
+        });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        ground.userData.isGround = true;
+        scene.add(ground);
+
+        // Create studio space
+        createStudioSpace();
+
+        // Setup dimension controls
+        setupDimensionControls();
+
+        // Event listeners
+        window.addEventListener('resize', onWindowResize, false);
+
+        // Setup view control buttons
+        document.getElementById('centerFitBtn').addEventListener('click', centerAndFitView);
+        document.getElementById('lockViewBtn').addEventListener('click', toggleViewLock);
+        document.getElementById('measurementsBtn').addEventListener('click', () => {
+            const btn = document.getElementById('measurementsBtn');
+            showMeasurements = !showMeasurements;
+            btn.classList.toggle('active');
+            btn.textContent = showMeasurements ? 'Hide Measurements' : 'Show Measurements';
+            updateMeasurements();
+        });
+
+        // Start animation loop
+        animate();
+
+        // Add this after other initialization code in init()
+        initializeViewControls();
+    }
+
+    // Animation loop
+    function animate(currentTime) {
+        requestAnimationFrame(animate);
+        
+        // Update controls
+        controls.update();
+        
+        // Update stats
+        updateStats(currentTime);
+        
+        // Render
+        renderer.render(scene, camera);
+    }
+
+    // Window resize handler
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // Update performance stats
+    function updateStats(currentTime) {
+        stats.frameCount++;
+        
+        // Update FPS every second
+        if (currentTime > stats.lastFrameTime + 1000) {
+            stats.fps = Math.round((stats.frameCount * 1000) / (currentTime - stats.lastFrameTime));
+            stats.frameCount = 0;
+            stats.lastFrameTime = currentTime;
+            
+            // Update debug info
+            document.getElementById('fps').textContent = stats.fps;
+            document.getElementById('camera-pos').textContent = 
+                `${camera.position.x.toFixed(2)},${camera.position.y.toFixed(2)},${camera.position.z.toFixed(2)}`;
+            document.getElementById('memory').textContent = 
+                `${Math.round(performance.memory?.usedJSHeapSize / 1048576 || 0)} MB`;
+        }
+    }
+
+    function updateCameraForDimensions(width, length, height) {
+        // Calculate the maximum dimension of the room
+        const maxDimension = Math.max(width, length, height);
+        
+        // Set camera's far clipping plane to be well beyond the room size
+        camera.far = maxDimension * 10;
+        camera.updateProjectionMatrix();
+        
+        // Adjust orbit controls max distance based on room size
+        // Allow zooming out to see the entire room plus some margin
+        controls.maxDistance = maxDimension * 3;
+        
+        // Also adjust the initial camera position if we're creating the room for the first time
+        if (controls.position === undefined) {
+            camera.position.set(maxDimension, maxDimension, maxDimension);
+        }
+    }
+
+    // Convert meters to feet
+    function metersToFeet(meters) {
+        return (meters * 3.28084).toFixed(1);
+    }
+
+    // Convert feet to meters
+    function feetToMeters(feet) {
+        return (feet / 3.28084).toFixed(1);
+    }
+
+    // Create measurement line helper
+    function createMeasurementLine(start, end, value, isWidth = false) {
+        // Create the main line group
+        const group = new THREE.Group();
+        
+        // Use consistent color for all lines and make it brighter
+        const lineColor = 0xffffff;
+        const lineMaterial = new THREE.LineBasicMaterial({ 
+            color: lineColor,
+            opacity: 0.8,
+            transparent: true
+        });
+        
+        // Calculate line positions that snap exactly to walls
+        const snapStart = start.clone();
+        const snapEnd = end.clone();
+        const offset = 0.5; // Small offset to prevent z-fighting with walls
+        
+        if (isWidth) {
+            // For width measurements, align with front wall
+            snapStart.z = Math.min(snapStart.z, -end.z + offset);
+            snapEnd.z = snapStart.z;
+        } else if (start.y === end.y) {
+            // For length measurements, align with side wall
+            snapStart.x = Math.min(snapStart.x, -end.x + offset);
+            snapEnd.x = snapStart.x;
+        }
+        
+        // Create the main measurement line
+        const lineGeometry = new THREE.BufferGeometry().setFromPoints([snapStart, snapEnd]);
+        const line = new THREE.Line(lineGeometry, lineMaterial);
+        
+        // Create end caps that align with the snapped positions
+        const capLength = 0.3; // Smaller, more precise caps
+        const startCap = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints([
+                snapStart.clone().add(new THREE.Vector3(0, capLength/2, 0)),
+                snapStart.clone().add(new THREE.Vector3(0, -capLength/2, 0))
+            ]),
+            lineMaterial
+        );
+        
+        const endCap = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints([
+                snapEnd.clone().add(new THREE.Vector3(0, capLength/2, 0)),
+                snapEnd.clone().add(new THREE.Vector3(0, -capLength/2, 0))
+            ]),
+            lineMaterial
+        );
+        
+        group.add(line, startCap, endCap);
+        group.userData.isMeasurement = true;
+        return group;
+    }
+
+    // Create text sprite for measurements
+    function createTextSprite(text, position, isWidth = false) {
+        // Calculate scale factor based on room dimensions
+        const envType = document.getElementById('environmentSelector')?.value || 'soundStage';
+        const env = environments[envType];
+        const maxDimension = Math.max(env.dimensions.width, env.dimensions.length, env.dimensions.height);
+        
+        // Base size increases with room size, but has limits
+        const baseScale = Math.min(Math.max(maxDimension / 20, 1), 5);  // Scale between 1x and 5x
+        
+        // Adjust canvas size based on scale
+        const baseWidth = 156;
+        const baseHeight = 84;
+        const canvas = document.createElement('canvas');
+        canvas.width = baseWidth * baseScale;
+        canvas.height = baseHeight * baseScale;
+        const context = canvas.getContext('2d');
+        
+        // Scale the drawing
+        const padding = 3 * baseScale;
+        const borderWidth = 3 * baseScale;
+        const fontSize = 32 * baseScale;
+        const cornerRadius = 8 * baseScale;
+        
+        // Draw white background box with black border
+        context.fillStyle = '#ffffff';
+        context.strokeStyle = '#000000';
+        context.lineWidth = borderWidth;
+        context.beginPath();
+        context.roundRect(padding, padding, canvas.width - padding * 2, canvas.height - padding * 2, cornerRadius);
+        context.fill();
+        context.stroke();
+        
+        // Draw black text with scaled font size
+        context.font = `Bold ${fontSize}px Futura`;
+        context.fillStyle = '#000000';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText(text, canvas.width/2, canvas.height/2);
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+        
+        const spriteMaterial = new THREE.SpriteMaterial({ 
+            map: texture,
+            transparent: true,
+            opacity: 1.0,
+            depthTest: false,
+            depthWrite: false,
+            sizeAttenuation: true
+        });
+        
+        const sprite = new THREE.Sprite(spriteMaterial);
+        
+        // Position sprite with scaled offset
+        const spritePos = position.clone();
+        const offset = 1.2 * baseScale;  // Scale the offset too
+        
+        if (isWidth) {
+            spritePos.z += offset;
+        } else if (Math.abs(position.y) < 0.1) { // Length measurement
+            spritePos.x -= offset;
+        }
+        
+        spritePos.z += 0.01;
+        sprite.position.copy(spritePos);
+        
+        // Scale the sprite size with room size
+        const spriteScale = 2.0 * baseScale;
+        sprite.scale.set(spriteScale, spriteScale * 0.5, 1);
+        
+        sprite.renderOrder = 999;
+        sprite.userData.isMeasurement = true;
+        return sprite;
+    }
+
+    // Update measurements function
+    function updateMeasurements() {
+        // Clear existing measurements
+        measurementObjects.forEach(obj => {
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) obj.material.dispose();
+            scene.remove(obj);
+        });
+        measurementObjects = [];
+
+        if (!showMeasurements) return;
+
+        const envType = document.getElementById('environmentSelector')?.value || 'soundStage';
+        const env = environments[envType];
+        const width = env.dimensions.width;
+        const length = env.dimensions.length;
+        const height = env.dimensions.height;
+
+        // Create measurement lines that snap to walls
+        const widthLine = createMeasurementLine(
+            new THREE.Vector3(-width/2, 0, -length/2),
+            new THREE.Vector3(width/2, 0, -length/2),
+            metersToFeet(width),
+            true
+        );
+        
+        const lengthLine = createMeasurementLine(
+            new THREE.Vector3(-width/2, 0, -length/2),
+            new THREE.Vector3(-width/2, 0, length/2),
+            metersToFeet(length)
+        );
+        
+        const heightLine = createMeasurementLine(
+            new THREE.Vector3(-width/2, 0, -length/2),
+            new THREE.Vector3(-width/2, height, -length/2),
+            metersToFeet(height)
+        );
+
+        // Position labels with proper alignment
+        const widthLabel = createTextSprite(
+            `${metersToFeet(width)}'`,
+            new THREE.Vector3(0, 0.2, -length/2 - 1),
+            true
+        );
+        
+        const lengthLabel = createTextSprite(
+            `${metersToFeet(length)}'`,
+            new THREE.Vector3(-width/2 - 1, 0.2, 0)
+        );
+        
+        const heightLabel = createTextSprite(
+            `${metersToFeet(height)}'`,
+            new THREE.Vector3(-width/2 - 1, height/2, -length/2)
+        );
+
+        measurementObjects.push(widthLine, lengthLine, heightLine, widthLabel, lengthLabel, heightLabel);
+        measurementObjects.forEach(obj => scene.add(obj));
+    }
+
+    // Create studio space with walls
+    function createStudioSpace(environmentType = 'standard') {
+        console.log("Creating environment:", environmentType);
+        const env = environments[environmentType];
+        if (!env) {
+            console.error('Invalid environment type:', environmentType);
+            return;
+        }
+
+        // Update camera settings for new dimensions
+        updateCameraForDimensions(
+            env.dimensions.width,
+            env.dimensions.length,
+            env.dimensions.height
+        );
+
+        // Clear existing studio elements and grid
+        const elementsToRemove = [];
+        scene.children.forEach(child => {
+            if (child.userData.isStudioElement || 
+                child.userData.isGrid || 
+                child.userData.isGround || 
+                child.userData.isWall) {
+                elementsToRemove.push(child);
+            }
+        });
+        
+        // Remove all the elements we found
+        elementsToRemove.forEach(element => {
+            scene.remove(element);
+        });
+        
+        console.log("Cleared scene, rebuilding environment");
+
+        // Make sure grid is SMALLER than the floor dimensions so it stays inside walls
+        let gridSize = Math.min(env.dimensions.width, env.dimensions.length);
+        // Slightly reduce grid size to ensure it stays inside walls
+        gridSize = gridSize * 0.9; 
+        
+        // Create a fresh ground plane that matches our environment
+        const groundGeometry = new THREE.PlaneGeometry(
+            env.dimensions.width, 
+            env.dimensions.length
+        );
+        const groundMaterial = new THREE.MeshStandardMaterial({ 
+            color: env.floorColor,
+            roughness: 0.8,
+            metalness: 0.2
+        });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        ground.userData.isGround = true;
+        scene.add(ground);
+        
+        console.log("Added ground plane of size", env.dimensions.width, "x", env.dimensions.length);
+
+        // Create grid that fits INSIDE the walls
+        if (env.hasGrid && env.features.showGridLines) {
+            // Calculate grid size based on wall positions
+            const gridSize = Math.min(env.dimensions.width, env.dimensions.length) * 0.98; // Slightly smaller than walls
+            
+            // Create a grid that's aligned with walls
+            const grid = new THREE.GridHelper(
+                gridSize,
+                env.gridDivisions,
+                env.gridColor,
+                env.gridColor
+            );
+            
+            // Position grid relative to walls
+            grid.position.set(0, 0.01, 0);
+            grid.userData = {
+                isGrid: true,
+                parentWidth: env.dimensions.width,
+                parentLength: env.dimensions.length,
+                gridSize: gridSize
+            };
+            scene.add(grid);
+        }
+
+        // Only add walls if the environment has them
+        if (env.features.hasWalls) {
+            // Create a SINGLE material instance for all walls
+            const wallMaterial = new THREE.MeshBasicMaterial({
+                color: env.wallColor,
+                transparent: true,
+                opacity: env.wallOpacity,
+                side: THREE.DoubleSide,
+                depthWrite: false  // Prevents z-fighting and improves transparency
+            });
+
+            const wallGeometry = new THREE.PlaneGeometry(1, 1);
+            
+            // Store wall references for grid alignment
+            const walls = {
+                back: null,
+                left: null,
+                right: null
+            };
+
+            // Create walls with THE SAME material instance (no .clone())
+            walls.back = new THREE.Mesh(wallGeometry, wallMaterial);
+            walls.back.scale.set(env.dimensions.width, env.dimensions.height, 1);
+            walls.back.position.set(0, env.dimensions.height/2, -env.dimensions.length/2);
+            walls.back.userData = { 
+                isStudioElement: true,
+                isWall: true,
+                wallType: 'back'
+            };
+            scene.add(walls.back);
+
+            walls.left = new THREE.Mesh(wallGeometry, wallMaterial);
+            walls.left.scale.set(env.dimensions.length, env.dimensions.height, 1);
+            walls.left.position.set(-env.dimensions.width/2, env.dimensions.height/2, 0);
+            walls.left.rotation.y = Math.PI / 2;
+            walls.left.userData = { 
+                isStudioElement: true,
+                isWall: true,
+                wallType: 'left'
+            };
+            scene.add(walls.left);
+
+            walls.right = new THREE.Mesh(wallGeometry, wallMaterial);
+            walls.right.scale.set(env.dimensions.length, env.dimensions.height, 1);
+            walls.right.position.set(env.dimensions.width/2, env.dimensions.height/2, 0);
+            walls.right.rotation.y = -Math.PI / 2;
+            walls.right.userData = { 
+                isStudioElement: true,
+                isWall: true,
+                wallType: 'right'
+            };
+            scene.add(walls.right);
+        }
+
+        // Add rigging system for sound stage
+        if (env.features.hasRigging) {
+            const config = env.features.riggingConfig;
+            const trussMaterial = new THREE.MeshStandardMaterial({
+                color: config.trussColor,
+                roughness: 0.7,
+                metalness: 0.8
+            });
+
+            // Create main support beams along length
+            for (let i = 0; i < config.numTrussesLength; i++) {
+                const trussGeometry = new THREE.BoxGeometry(config.trussSize, config.trussSize, env.dimensions.length);
+                const truss = new THREE.Mesh(trussGeometry, trussMaterial);
+                const xPos = -env.dimensions.width/2 + (env.dimensions.width/(config.numTrussesLength-1)) * i;
+                truss.position.set(xPos, env.dimensions.height - config.trussSize/2, 0);
+                truss.userData = {
+                    isStudioElement: true,
+                    isRigging: true
+                };
+                scene.add(truss);
+            }
+
+            // Create cross beams along width
+            for (let i = 0; i < config.numTrussesWidth; i++) {
+                const crossTrussGeometry = new THREE.BoxGeometry(env.dimensions.width, config.trussSize, config.trussSize);
+                const crossTruss = new THREE.Mesh(crossTrussGeometry, trussMaterial);
+                const zPos = -env.dimensions.length/2 + (env.dimensions.length/(config.numTrussesWidth-1)) * i;
+                crossTruss.position.set(0, env.dimensions.height - config.trussSize*1.5, zPos);
+                crossTruss.userData = {
+                    isStudioElement: true,
+                    isRigging: true
+                };
+                scene.add(crossTruss);
+            }
+        }
+
+        // Count and log all walls
+        console.log("FINAL COUNT - Walls in scene:", scene.children.filter(c => c.userData.isWall).length);
+        scene.children.filter(c => c.userData.isWall).forEach(wall => {
+            console.log("Wall type:", wall.userData.wallType, "at position:", wall.position);
+        });
+
+        // Add environment selector and grid toggle if they don't exist
+        if (!document.getElementById('environmentSelector')) {
+            const controlsContainer = document.createElement('div');
+            controlsContainer.className = 'environment-controls';
+
+            const selector = document.createElement('select');
+            selector.id = 'environmentSelector';
+            selector.className = 'control-button';
+            
+            Object.keys(environments).forEach(key => {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = environments[key].name;
+                selector.appendChild(option);
+            });
+
+            const gridToggle = document.createElement('button');
+            gridToggle.id = 'gridToggle';
+            gridToggle.className = 'control-button';
+            gridToggle.textContent = 'Show Grid Lines';
+
+            const wallToggle = document.createElement('button');
+            wallToggle.id = 'wallToggle';
+            wallToggle.className = 'control-button';
+            wallToggle.textContent = 'Solid Walls';
+
+            selector.addEventListener('change', (e) => {
+                createStudioSpace(e.target.value);
+                // Update button states based on current environment
+                const currentEnv = environments[e.target.value];
+                gridToggle.textContent = currentEnv.features.showGridLines ? 'Hide Grid Lines' : 'Show Grid Lines';
+                gridToggle.classList.toggle('active', currentEnv.features.showGridLines);
+                wallToggle.classList.remove('active'); // Walls start transparent
+            });
+
+            gridToggle.addEventListener('click', () => {
+                const currentEnv = environments[document.getElementById('environmentSelector').value];
+                currentEnv.features.showGridLines = !currentEnv.features.showGridLines;
+                
+                // Remove ALL grid-related objects
+                const toRemove = [];
+                scene.traverse((child) => {
+                    if (child.userData.isGrid || child instanceof THREE.GridHelper) {
+                        toRemove.push(child);
+                    }
+                });
+                toRemove.forEach(obj => scene.remove(obj));
+
+                // Only create new grid if enabled
+                if (currentEnv.hasGrid && currentEnv.features.showGridLines) {
+                    const gridSize = Math.min(currentEnv.dimensions.width, currentEnv.dimensions.length) * 0.98;
+                    const grid = new THREE.GridHelper(
+                        gridSize,
+                        currentEnv.gridDivisions,
+                        currentEnv.gridColor,
+                        currentEnv.gridColor
+                    );
+                    
+                    // For black box, increase grid line opacity
+                    if (currentEnv === environments.blackBox) {
+                        grid.material.opacity = 0.5;
+                        grid.material.transparent = true;
+                    }
+                    
+                    grid.position.set(0, 0.01, 0);
+                    grid.userData = {
+                        isGrid: true,
+                        parentWidth: currentEnv.dimensions.width,
+                        parentLength: currentEnv.dimensions.length,
+                        gridSize: gridSize
+                    };
+                    scene.add(grid);
+                }
+                
+                gridToggle.textContent = currentEnv.features.showGridLines ? 'Hide Grid Lines' : 'Show Grid Lines';
+                gridToggle.classList.toggle('active', currentEnv.features.showGridLines);
+            });
+
+            wallToggle.addEventListener('click', () => {
+                const isSolid = wallToggle.classList.toggle('active');
+                const currentEnv = environments[document.getElementById('environmentSelector').value];
+                
+                // Find all wall meshes
+                scene.children.forEach(child => {
+                    if (child.userData.isWall) {
+                        const material = child.material;
+                        if (isSolid) {
+                            // Make walls solid
+                            material.opacity = 1.0;
+                            material.transparent = false;
+                            material.depthWrite = true;
+                            // Ensure wall color is visible in solid mode
+                            material.color.setHex(currentEnv.wallColor);
+                        } else {
+                            // Make walls transparent (default state)
+                            material.opacity = currentEnv.wallOpacity;
+                            material.transparent = true;
+                            material.depthWrite = false;
+                            // Restore original wall color
+                            material.color.setHex(currentEnv.wallColor);
+                        }
+                    }
+                });
+
+                wallToggle.textContent = isSolid ? 'Transparent Walls' : 'Solid Walls';
+            });
+
+            controlsContainer.appendChild(selector);
+            controlsContainer.appendChild(gridToggle);
+            controlsContainer.appendChild(wallToggle);
+            document.body.appendChild(controlsContainer);
+        }
+
+        // Update measurements after creating new space
+        updateMeasurements();
+    }
+
+    // Setup dimension controls
+    function setupDimensionControls() {
+        const widthInput = document.getElementById('width-input');
+        const lengthInput = document.getElementById('length-input');
+        const heightInput = document.getElementById('height-input');
+        
+        // Simple update function
+        function handleDimensionChange(input, dimensionType) {
+            const value = input.value;
+            if (!value) return;
+            
+            const envType = document.getElementById('environmentSelector')?.value || 'soundStage';
+            const env = environments[envType];
+            env.dimensions[dimensionType] = Number(feetToMeters(value));
+            
+            // Update displays
+            updateDimensionPanel();
+            createStudioSpace(envType);
+            updateMeasurements();
+        }
+
+        // Set up each input
+        widthInput.step = "1";
+        lengthInput.step = "1";
+        heightInput.step = "1";
+
+        widthInput.addEventListener('change', () => handleDimensionChange(widthInput, 'width'));
+        lengthInput.addEventListener('change', () => handleDimensionChange(lengthInput, 'length'));
+        heightInput.addEventListener('change', () => handleDimensionChange(heightInput, 'height'));
+
+        // Update when environment changes
+        const environmentSelector = document.getElementById('environmentSelector');
+        if (environmentSelector) {
+            environmentSelector.addEventListener('change', () => {
+                updateDimensionPanel();
+            });
+        }
+
+        // Initial update
+        updateDimensionPanel();
+    }
+
+    // Update the measurement line creation
+    function createMeasurementLine(start, end, value, isWidth = false) {
+        // Create the main line group
+        const group = new THREE.Group();
+        
+        // Use consistent color for all lines and make it brighter
+        const lineColor = 0xffffff;
+        const lineMaterial = new THREE.LineBasicMaterial({ 
+            color: lineColor,
+            opacity: 0.8,
+            transparent: true
+        });
+        
+        // Calculate line positions that snap exactly to walls
+        const snapStart = start.clone();
+        const snapEnd = end.clone();
+        const offset = 0.5; // Small offset to prevent z-fighting with walls
+        
+        if (isWidth) {
+            // For width measurements, align with front wall
+            snapStart.z = Math.min(snapStart.z, -end.z + offset);
+            snapEnd.z = snapStart.z;
+        } else if (start.y === end.y) {
+            // For length measurements, align with side wall
+            snapStart.x = Math.min(snapStart.x, -end.x + offset);
+            snapEnd.x = snapStart.x;
+        }
+        
+        // Create the main measurement line
+        const lineGeometry = new THREE.BufferGeometry().setFromPoints([snapStart, snapEnd]);
+        const line = new THREE.Line(lineGeometry, lineMaterial);
+        
+        // Create end caps that align with the snapped positions
+        const capLength = 0.3; // Smaller, more precise caps
+        const startCap = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints([
+                snapStart.clone().add(new THREE.Vector3(0, capLength/2, 0)),
+                snapStart.clone().add(new THREE.Vector3(0, -capLength/2, 0))
+            ]),
+            lineMaterial
+        );
+        
+        const endCap = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints([
+                snapEnd.clone().add(new THREE.Vector3(0, capLength/2, 0)),
+                snapEnd.clone().add(new THREE.Vector3(0, -capLength/2, 0))
+            ]),
+            lineMaterial
+        );
+        
+        group.add(line, startCap, endCap);
+        group.userData.isMeasurement = true;
+        return group;
+    }
+
+    // Update the text sprite creation
+    function createTextSprite(text, position, isWidth = false) {
+        // Calculate scale factor based on room dimensions
+        const envType = document.getElementById('environmentSelector')?.value || 'soundStage';
+        const env = environments[envType];
+        const maxDimension = Math.max(env.dimensions.width, env.dimensions.length, env.dimensions.height);
+        
+        // Base size increases with room size, but has limits
+        const baseScale = Math.min(Math.max(maxDimension / 20, 1), 5);  // Scale between 1x and 5x
+        
+        // Adjust canvas size based on scale
+        const baseWidth = 156;
+        const baseHeight = 84;
+        const canvas = document.createElement('canvas');
+        canvas.width = baseWidth * baseScale;
+        canvas.height = baseHeight * baseScale;
+        const context = canvas.getContext('2d');
+        
+        // Scale the drawing
+        const padding = 3 * baseScale;
+        const borderWidth = 3 * baseScale;
+        const fontSize = 32 * baseScale;
+        const cornerRadius = 8 * baseScale;
+        
+        // Draw white background box with black border
+        context.fillStyle = '#ffffff';
+        context.strokeStyle = '#000000';
+        context.lineWidth = borderWidth;
+        context.beginPath();
+        context.roundRect(padding, padding, canvas.width - padding * 2, canvas.height - padding * 2, cornerRadius);
+        context.fill();
+        context.stroke();
+        
+        // Draw black text with scaled font size
+        context.font = `Bold ${fontSize}px Futura`;
+        context.fillStyle = '#000000';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText(text, canvas.width/2, canvas.height/2);
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+        
+        const spriteMaterial = new THREE.SpriteMaterial({ 
+            map: texture,
+            transparent: true,
+            opacity: 1.0,
+            depthTest: false,
+            depthWrite: false,
+            sizeAttenuation: true
+        });
+        
+        const sprite = new THREE.Sprite(spriteMaterial);
+        
+        // Position sprite with scaled offset
+        const spritePos = position.clone();
+        const offset = 1.2 * baseScale;  // Scale the offset too
+        
+        if (isWidth) {
+            spritePos.z += offset;
+        } else if (Math.abs(position.y) < 0.1) { // Length measurement
+            spritePos.x -= offset;
+        }
+        
+        spritePos.z += 0.01;
+        sprite.position.copy(spritePos);
+        
+        // Scale the sprite size with room size
+        const spriteScale = 2.0 * baseScale;
+        sprite.scale.set(spriteScale, spriteScale * 0.5, 1);
+        
+        sprite.renderOrder = 999;
+        sprite.userData.isMeasurement = true;
+        return sprite;
+    }
+
+    // Update measurements function
+    function updateMeasurements() {
+        // Clear existing measurements
+        measurementObjects.forEach(obj => {
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) obj.material.dispose();
+            scene.remove(obj);
+        });
+        measurementObjects = [];
+
+        if (!showMeasurements) return;
+
+        const envType = document.getElementById('environmentSelector')?.value || 'soundStage';
+        const env = environments[envType];
+        const width = env.dimensions.width;
+        const length = env.dimensions.length;
+        const height = env.dimensions.height;
+
+        // Create measurement lines that snap to walls
+        const widthLine = createMeasurementLine(
+            new THREE.Vector3(-width/2, 0, -length/2),
+            new THREE.Vector3(width/2, 0, -length/2),
+            metersToFeet(width),
+            true
+        );
+        
+        const lengthLine = createMeasurementLine(
+            new THREE.Vector3(-width/2, 0, -length/2),
+            new THREE.Vector3(-width/2, 0, length/2),
+            metersToFeet(length)
+        );
+        
+        const heightLine = createMeasurementLine(
+            new THREE.Vector3(-width/2, 0, -length/2),
+            new THREE.Vector3(-width/2, height, -length/2),
+            metersToFeet(height)
+        );
+
+        // Position labels with proper alignment
+        const widthLabel = createTextSprite(
+            `${metersToFeet(width)}'`,
+            new THREE.Vector3(0, 0.2, -length/2 - 1),
+            true
+        );
+        
+        const lengthLabel = createTextSprite(
+            `${metersToFeet(length)}'`,
+            new THREE.Vector3(-width/2 - 1, 0.2, 0)
+        );
+        
+        const heightLabel = createTextSprite(
+            `${metersToFeet(height)}'`,
+            new THREE.Vector3(-width/2 - 1, height/2, -length/2)
+        );
+
+        measurementObjects.push(widthLine, lengthLine, heightLine, widthLabel, lengthLabel, heightLabel);
+        measurementObjects.forEach(obj => scene.add(obj));
+    }
+
+    // Update dimension panel to show meters
+    function updateDimensionPanel() {
+        const envType = document.getElementById('environmentSelector')?.value || 'soundStage';
+        const env = environments[envType];
+        
+        // Convert stored meter values to feet for display
+        document.getElementById('width-input').value = metersToFeet(env.dimensions.width);
+        document.getElementById('length-input').value = metersToFeet(env.dimensions.length);
+        document.getElementById('height-input').value = metersToFeet(env.dimensions.height);
+        
+        // Show meter conversions
+        document.getElementById('width-m').textContent = `${env.dimensions.width}m`;
+        document.getElementById('length-m').textContent = `${env.dimensions.length}m`;
+        document.getElementById('height-m').textContent = `${env.dimensions.height}m`;
+    }
+
+    // Add this function after updateCameraForDimensions
+    function centerAndFitView() {
+        const centerFitBtn = document.getElementById('centerFitBtn');
+        
+        if (!isCenterLocked) {
+            // Store original controls state
+            originalControlsState = {
+                enableRotate: controls.enableRotate,
+                enablePan: controls.enablePan,
+                minPolarAngle: controls.minPolarAngle,
+                maxPolarAngle: controls.maxPolarAngle,
+                minAzimuthAngle: controls.minAzimuthAngle,
+                maxAzimuthAngle: controls.maxAzimuthAngle
+            };
+
+            const envType = document.getElementById('environmentSelector')?.value || 'soundStage';
+            const env = environments[envType];
+            
+            // Calculate the optimal camera position
+            const roomLength = env.dimensions.length;
+            const roomWidth = env.dimensions.width;
+            const roomHeight = env.dimensions.height;
+            
+            // Position camera for eye-level view
+            const targetPos = new THREE.Vector3(
+                0,  // Centered on width
+                roomHeight * 0.4,  // Eye level (40% of room height)
+                roomLength * 1.3   // Further back for better perspective
+            );
+            const targetLookAt = new THREE.Vector3(
+                0,              // Center width
+                roomHeight * 0.3, // Look slightly up
+                0               // Center length
+            );
+            
+            // Store current camera position and rotation
+            const startPos = camera.position.clone();
+            const startRot = camera.quaternion.clone();
+            
+            // Animation duration in milliseconds
+            const duration = 1000;
+            const startTime = performance.now();
+            
+            function animate(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Ease function (smooth start and end)
+                const eased = progress < 0.5 
+                    ? 2 * progress * progress 
+                    : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                
+                // Interpolate position
+                camera.position.lerpVectors(startPos, targetPos, eased);
+                
+                // Look at target point
+                camera.lookAt(targetLookAt);
+                
+                // Update controls target
+                controls.target.copy(targetLookAt);
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // Lock the view once animation is complete
+                    controls.enableRotate = false;  // Disable rotation
+                    controls.enablePan = false;     // Disable panning
+                    // Lock the vertical angle more precisely for perfect horizontal alignment
+                    controls.minPolarAngle = controls.maxPolarAngle = Math.PI/2;  // 90 degrees
+                    controls.minAzimuthAngle = controls.maxAzimuthAngle = 0;      // Lock horizontal
+                }
+            }
+            
+            requestAnimationFrame(animate);
+            
+            // Update button state
+            isCenterLocked = true;
+            centerFitBtn.textContent = 'Unlock View';
+            centerFitBtn.classList.add('active');
+        } else {
+            // Restore original controls state
+            if (originalControlsState) {
+                controls.enableRotate = originalControlsState.enableRotate;
+                controls.enablePan = originalControlsState.enablePan;
+                controls.minPolarAngle = originalControlsState.minPolarAngle;
+                controls.maxPolarAngle = originalControlsState.maxPolarAngle;
+                controls.minAzimuthAngle = originalControlsState.minAzimuthAngle;
+                controls.maxAzimuthAngle = originalControlsState.maxAzimuthAngle;
+            }
+            
+            // Update button state
+            isCenterLocked = false;
+            centerFitBtn.textContent = 'Center & Fit';
+            centerFitBtn.classList.remove('active');
+        }
+    }
+
+    function toggleViewLock() {
+        const lockViewBtn = document.getElementById('lockViewBtn');
+        
+        if (!isViewLocked) {
+            // Store the current state without modifying anything
+            savedCameraState = {
+                position: camera.position.clone(),
+                quaternion: camera.quaternion.clone(),
+                target: controls.target.clone(),
+                zoom: camera.zoom
+            };
+
+            // Simply disable rotation and panning, but keep zoom
+            controls.enableRotate = false;
+            controls.enablePan = false;
+            controls.enableZoom = true;
+            
+            // Update button state
+            isViewLocked = true;
+            lockViewBtn.classList.add('active');
+            lockViewBtn.textContent = 'Unlock View';
+        } else {
+            // Re-enable all controls without changing position
+            controls.enableRotate = true;
+            controls.enablePan = true;
+            controls.enableZoom = true;
+            
+            // Update button state
+            isViewLocked = false;
+            lockViewBtn.classList.remove('active');
+            lockViewBtn.textContent = 'Lock View';
+        }
+    }
+
+    // Add this after other initialization code in init()
+    function initializeViewControls() {
+        // Store original perspective camera settings
+        originalCamera = {
+            fov: camera.fov,
+            aspect: camera.aspect,
+            near: camera.near,
+            far: camera.far,
+            position: camera.position.clone(),
+            up: camera.up.clone()
+        };
+
+        // Add event listeners for view buttons
+        document.getElementById('topViewBtn').addEventListener('click', () => switchToView('top'));
+        document.getElementById('frontViewBtn').addEventListener('click', () => switchToView('front'));
+        document.getElementById('sideViewBtn').addEventListener('click', () => switchToView('side'));
+
+        // Keep existing button functionality
+        document.getElementById('centerFitBtn').addEventListener('click', centerAndFitView);
+        document.getElementById('lockViewBtn').addEventListener('click', toggleViewLock);
+        document.getElementById('measurementsBtn').addEventListener('click', () => {
+            const btn = document.getElementById('measurementsBtn');
+            showMeasurements = !showMeasurements;
+            btn.classList.toggle('active');
+            btn.textContent = showMeasurements ? 'Hide Measurements' : 'Show Measurements';
+            updateMeasurements();
+        });
+    }
+
+    // Add this function to handle view switching
+    function switchToView(viewType) {
+        if (isTransitioning) return;
+        isTransitioning = true;
+
+        const envType = document.getElementById('environmentSelector')?.value || 'soundStage';
+        const env = environments[envType];
+        const maxDim = Math.max(env.dimensions.width, env.dimensions.length, env.dimensions.height);
+        
+        // Update button states
+        document.querySelectorAll('.view-button').forEach(btn => {
+            if (btn.id === viewType + 'ViewBtn') {
+                btn.classList.add('active');
+            } else if (['topViewBtn', 'frontViewBtn', 'sideViewBtn'].includes(btn.id)) {
+                btn.classList.remove('active');
+            }
+        });
+        
+        // Store start position and target position
+        const startPos = camera.position.clone();
+        const startRot = camera.quaternion.clone();
+        let targetPos, targetLookAt;
+
+        switch(viewType) {
+            case 'top':
+                targetPos = new THREE.Vector3(0, maxDim * 2, 0);
+                targetLookAt = new THREE.Vector3(0, 0, 0);
+                controls.enableRotate = false;
+                break;
+            case 'front':
+                targetPos = new THREE.Vector3(0, maxDim * 0.5, maxDim * 1.5);
+                targetLookAt = new THREE.Vector3(0, maxDim * 0.5, 0);
+                controls.enableRotate = true;
+                break;
+            case 'side':
+                targetPos = new THREE.Vector3(maxDim * 1.5, maxDim * 0.5, 0);
+                targetLookAt = new THREE.Vector3(0, maxDim * 0.5, 0);
+                controls.enableRotate = true;
+                break;
+        }
+
+        // Animation duration in milliseconds
+        const duration = 1000;
+        const startTime = performance.now();
+
+        function animateView(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Ease function (smooth start and end)
+            const eased = progress < 0.5 
+                ? 2 * progress * progress 
+                : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+            
+            // Interpolate position
+            camera.position.lerpVectors(startPos, targetPos, eased);
+            
+            // Look at target point
+            camera.lookAt(targetLookAt);
+            
+            // Update controls target
+            controls.target.lerp(targetLookAt, eased);
+            
+            if (progress < 1) {
+                requestAnimationFrame(animateView);
+            } else {
+                isTransitioning = false;
+                currentViewMode = viewType;
+                
+                // Final camera position
+                camera.position.copy(targetPos);
+                camera.lookAt(targetLookAt);
+                controls.target.copy(targetLookAt);
+
+                // Set final view constraints
+                if (viewType === 'top') {
+                    controls.minPolarAngle = 0;
+                    controls.maxPolarAngle = 0;
+                } else {
+                    controls.minPolarAngle = 0;
+                    controls.maxPolarAngle = Math.PI;
+                }
+            }
+        }
+        
+        requestAnimationFrame(animateView);
+    }
+
+    // Initialize when the page loads
+    window.addEventListener('load', init);
+    </script>
+</body>
+</html> 
